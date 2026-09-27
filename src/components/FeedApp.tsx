@@ -140,25 +140,27 @@ export function FeedApp({ initialReports }: { initialReports: Report[] }) {
             animate={reduceMotion ? { opacity: 1 } : { opacity: 1, y: 0 }}
             exit={reduceMotion ? { opacity: 0 } : { opacity: 0, y: 24 }}
             transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
-            className="absolute inset-x-0 bottom-0 z-20 max-h-[65dvh] overflow-y-auto rounded-t-2xl border-t border-zinc-200 bg-white/95 p-4 shadow-2xl backdrop-blur-md lg:inset-x-auto lg:bottom-6 lg:left-6 lg:top-24 lg:w-[380px] lg:max-h-none lg:rounded-2xl lg:border"
+            className="absolute inset-x-0 bottom-0 z-20 max-h-[65dvh] overflow-hidden rounded-t-2xl border-t border-zinc-200 bg-white/95 shadow-2xl backdrop-blur-md lg:inset-x-auto lg:bottom-6 lg:left-6 lg:top-24 lg:w-[380px] lg:max-h-none lg:rounded-2xl lg:border"
           >
-            {filtered.length === 0 ? (
-              <div className="flex flex-col items-center gap-1 rounded-xl border border-dashed border-zinc-300 py-12 text-center">
-                <p className="text-sm font-medium text-zinc-600">Nothing here yet.</p>
-                <p className="text-sm text-zinc-400">Be the first to report something.</p>
-              </div>
-            ) : (
-              <div className="flex flex-col gap-3">
-                {filtered.map((report) => (
-                  <ReportCard
-                    key={report.id}
-                    report={report}
-                    active={selected?.id === report.id}
-                    onSelect={() => setSelected(report)}
-                  />
-                ))}
-              </div>
-            )}
+            <div className="h-full overflow-y-auto p-4">
+              {filtered.length === 0 ? (
+                <div className="flex flex-col items-center gap-1 rounded-xl border border-dashed border-zinc-300 py-12 text-center">
+                  <p className="text-sm font-medium text-zinc-600">Nothing here yet.</p>
+                  <p className="text-sm text-zinc-400">Be the first to report something.</p>
+                </div>
+              ) : (
+                <div className="flex flex-col gap-3">
+                  {filtered.map((report) => (
+                    <ReportCard
+                      key={report.id}
+                      report={report}
+                      active={selected?.id === report.id}
+                      onSelect={() => setSelected(report)}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
