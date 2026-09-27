@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { X, Crosshair, Spinner } from "@phosphor-icons/react";
-import { supabase } from "@/lib/supabase";
 import { CATEGORY_META, CATEGORY_ORDER, type ReportCategory } from "@/lib/types";
 
 function nowForInput() {
@@ -28,6 +27,7 @@ export function ReportFormDrawer({
   const [locating, setLocating] = useState(false);
   const [occurredAt, setOccurredAt] = useState(nowForInput());
   const [contactInfo, setContactInfo] = useState("");
+  const [website, setWebsite] = useState(""); // honeypot, must stay empty
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -39,6 +39,7 @@ export function ReportFormDrawer({
     setCoords(null);
     setOccurredAt(nowForInput());
     setContactInfo("");
+    setWebsite("");
     setError(null);
   }
 
@@ -79,22 +80,33 @@ export function ReportFormDrawer({
     setSubmitting(true);
     setError(null);
 
-    const { error: insertError } = await supabase.from("reports").insert({
-      category,
-      title: title.trim(),
-      description: description.trim() || null,
-      location_text: locationText.trim(),
-      lat: coords?.lat ?? null,
-      lng: coords?.lng ?? null,
-      occurred_at: new Date(occurredAt).toISOString(),
-      contact_info: contactInfo.trim() || null,
-      image_url: null,
+    const res = await fetch("/api/reports", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        category,
+        title: title.trim(),
+        description: description.trim() || null,
+        location_text: locationText.trim(),
+        lat: coords?.lat ?? null,
+        lng: coords?.lng ?? null,
+        occurred_at: new Date(occurredAt).toISOString(),
+        contact_info: contactInfo.trim() || null,
+        website,
+      }),
     });
 
     setSubmitting(false);
 
-    if (insertError) {
-      setError("Could not post this report. Try again.");
+    if (!res.ok) {
+      const body = await res.json().catch(() => null);
+      if (body?.error === "too_fast") {
+        setError("Please wait a few seconds before posting again.");
+      } else if (body?.error === "rate_limited") {
+        setError("You've posted a few reports already, try again in a bit.");
+      } else {
+        setError("Could not post this report. Try again.");
+      }
       return;
     }
 
@@ -256,6 +268,20 @@ export function ReportFormDrawer({
                   onChange={(e) => setContactInfo(e.target.value)}
                   placeholder="WhatsApp 082 000 0000"
                   className="rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+                />
+              </div>
+
+              {/* Honeypot: hidden from real users, bots that autofill every field trip it. */}
+              <div className="absolute left-[-9999px] h-0 overflow-hidden" aria-hidden="true">
+                <label htmlFor="website">Website</label>
+                <input
+                  id="website"
+                  name="website"
+                  type="text"
+                  tabIndex={-1}
+                  autoComplete="off"
+                  value={website}
+                  onChange={(e) => setWebsite(e.target.value)}
                 />
               </div>
 
