@@ -1,36 +1,49 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Warner Beach Live
 
-## Getting Started
+A real-time community feed for Warner Beach, KwaZulu-Natal: events, missing pets, burst pipes, hazards, and lost & found, each pinned with a time and location.
 
-First, run the development server:
+Anyone can submit a report. New reports appear on the map and list instantly for everyone viewing the feed, no refresh needed.
+
+## Features
+
+- **Map-first layout** — full-viewport map fit to the Warner Beach area, list and filters float over it
+- **Live updates** — new reports appear in real time via Supabase Realtime, no polling
+- **Category filters** — event, missing pet, burst pipe, hazard, lost & found, other
+- **Public submission form** — category, title, details, location (with a "use my location" option), time, optional contact info
+- **Collapsible report list** — sidebar on desktop, bottom sheet on mobile
+
+## Stack
+
+- [Next.js](https://nextjs.org) (App Router) + TypeScript
+- [Tailwind CSS](https://tailwindcss.com)
+- [Supabase](https://supabase.com) — Postgres + Realtime, public read/insert via row-level security
+- [Leaflet](https://leafletjs.com) / [react-leaflet](https://react-leaflet.js.org) with Esri Street Map tiles
+- [Motion](https://motion.dev) for the submission drawer and list transitions
+
+## Getting started
+
+```bash
+npm install
+```
+
+Create `.env.local` with your own Supabase project:
+
+```
+NEXT_PUBLIC_SUPABASE_URL=your-project-url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+```
+
+The `reports` table schema (with RLS policies for public read/insert and Realtime enabled) is defined in this repo's migration history — see `src/lib/types.ts` for the shape.
+
+Next 16 defaults to Turbopack, which doesn't play well with this workspace's shared `.claude` symlink, so dev/build are pinned to webpack:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm run build
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Known limitations
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+See open issues — no photo upload yet, no moderation/rate-limiting on public submissions, and no in-app way to mark a report resolved.
