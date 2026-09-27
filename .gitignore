@@ -36,6 +36,11 @@ yarn-error.log*
 # vercel
 .vercel
 
+# workspace-relative symlinks into the local Websites folder, not
+# portable outside this specific machine/folder layout
+/.claude
+/.mcp.json
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts
