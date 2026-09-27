@@ -88,7 +88,7 @@ export function FeedApp({ initialReports }: { initialReports: Report[] }) {
   );
 
   return (
-    <div className="relative h-[100dvh] w-full overflow-hidden bg-zinc-50">
+    <div className="fixed inset-0 overflow-hidden bg-zinc-50">
       <div className="absolute inset-0">
         <FeedMap reports={filtered} selected={selected} onSelect={setSelected} />
       </div>
