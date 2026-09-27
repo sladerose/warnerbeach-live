@@ -38,7 +38,7 @@ export async function POST(request: Request) {
   const description =
     typeof body.description === "string" ? body.description.trim().slice(0, 2000) || null : null;
   const locationText =
-    typeof body.location_text === "string" ? body.location_text.trim().slice(0, 200) : "";
+    typeof body.location_text === "string" ? body.location_text.trim().slice(0, 200) || null : null;
   const lat = typeof body.lat === "number" && Number.isFinite(body.lat) ? body.lat : null;
   const lng = typeof body.lng === "number" && Number.isFinite(body.lng) ? body.lng : null;
   const occurredAt = typeof body.occurred_at === "string" ? body.occurred_at : "";
@@ -51,7 +51,7 @@ export async function POST(request: Request) {
   if (!title) {
     return NextResponse.json({ error: "invalid_title" }, { status: 400 });
   }
-  if (!locationText) {
+  if (lat === null || lng === null) {
     return NextResponse.json({ error: "invalid_location" }, { status: 400 });
   }
   if (!occurredAt || Number.isNaN(new Date(occurredAt).getTime())) {
@@ -82,5 +82,5 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "insert_failed" }, { status: 500 });
   }
 
-  return NextResponse.json({ ok: true, report: data });
+  return NextResponse.json({ ok: true, report: data.report, resolve_token: data.resolve_token });
 }

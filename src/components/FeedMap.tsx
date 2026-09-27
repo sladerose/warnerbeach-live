@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
+import { MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { CATEGORY_META, type Report } from "@/lib/types";
@@ -17,6 +17,23 @@ function categoryIcon(report: Report) {
     iconSize: [16, 16],
     iconAnchor: [8, 8],
   });
+}
+
+const draftIcon = L.divIcon({
+  className: "",
+  html: `<span class="block size-5 rounded-full border-2 border-white bg-blue-600 shadow-lg"></span>`,
+  iconSize: [20, 20],
+  iconAnchor: [10, 10],
+});
+
+function PinPlacer({ onPlace }: { onPlace: (coords: { lat: number; lng: number }) => void }) {
+  useMapEvents({
+    click(e) {
+      onPlace({ lat: e.latlng.lat, lng: e.latlng.lng });
+    },
+  });
+
+  return null;
 }
 
 function ResizeHandler() {
@@ -53,10 +70,20 @@ export function FeedMap({
   reports,
   selected,
   onSelect,
+  pinEditable = false,
+  pinCoords = null,
+  onPinChange,
+  placingPin = false,
+  onPlacingClick,
 }: {
   reports: Report[];
   selected: Report | null;
   onSelect: (report: Report) => void;
+  pinEditable?: boolean;
+  pinCoords?: { lat: number; lng: number } | null;
+  onPinChange?: (coords: { lat: number; lng: number }) => void;
+  placingPin?: boolean;
+  onPlacingClick?: (coords: { lat: number; lng: number }) => void;
 }) {
   const located = reports.filter(
     (r): r is Report & { lat: number; lng: number } => r.lat != null && r.lng != null
@@ -68,7 +95,7 @@ export function FeedMap({
       boundsOptions={FIT_OPTIONS}
       maxZoom={19}
       scrollWheelZoom
-      className="absolute inset-0"
+      className={`absolute inset-0 ${placingPin ? "cursor-crosshair" : ""}`}
     >
       <TileLayer
         attribution="Tiles &copy; Esri, Garmin, GEBCO, NOAA NGDC, &copy; OpenStreetMap contributors"
@@ -83,10 +110,26 @@ export function FeedMap({
         >
           <Popup>
             <p className="font-medium">{report.title}</p>
-            <p className="text-sm text-zinc-600">{report.location_text}</p>
+            {report.location_text && (
+              <p className="text-sm text-zinc-600">{report.location_text}</p>
+            )}
           </Popup>
         </Marker>
       ))}
+      {pinEditable && pinCoords && onPinChange && (
+        <Marker
+          position={[pinCoords.lat, pinCoords.lng]}
+          icon={draftIcon}
+          draggable
+          eventHandlers={{
+            dragend: (e) => {
+              const pos = e.target.getLatLng();
+              onPinChange({ lat: pos.lat, lng: pos.lng });
+            },
+          }}
+        />
+      )}
+      {placingPin && onPlacingClick && <PinPlacer onPlace={onPlacingClick} />}
       <FlyToSelected report={selected} />
       <ResizeHandler />
     </MapContainer>

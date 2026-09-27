@@ -2,8 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
-import { X, Crosshair, Spinner } from "@phosphor-icons/react";
+import { X, Crosshair, MapPinLine, Spinner } from "@phosphor-icons/react";
 import { CATEGORY_META, CATEGORY_ORDER, type ReportCategory } from "@/lib/types";
+import { saveOwnedReport } from "@/lib/ownedReports";
 
 function nowForInput() {
   const d = new Date();
@@ -14,16 +15,25 @@ function nowForInput() {
 export function ReportFormDrawer({
   open,
   onClose,
+  coords,
+  onCoordsChange,
+  placingPin,
+  onStartPlacing,
+  onCancelPlacing,
 }: {
   open: boolean;
   onClose: () => void;
+  coords: { lat: number; lng: number } | null;
+  onCoordsChange: (coords: { lat: number; lng: number } | null) => void;
+  placingPin: boolean;
+  onStartPlacing: () => void;
+  onCancelPlacing: () => void;
 }) {
   const reduceMotion = useReducedMotion();
   const [category, setCategory] = useState<ReportCategory | null>(null);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [locationText, setLocationText] = useState("");
-  const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [locating, setLocating] = useState(false);
   const [occurredAt, setOccurredAt] = useState(nowForInput());
   const [contactInfo, setContactInfo] = useState("");
@@ -36,7 +46,7 @@ export function ReportFormDrawer({
     setTitle("");
     setDescription("");
     setLocationText("");
-    setCoords(null);
+    onCoordsChange(null);
     setOccurredAt(nowForInput());
     setContactInfo("");
     setWebsite("");
@@ -60,10 +70,11 @@ export function ReportFormDrawer({
 
   function useMyLocation() {
     if (!navigator.geolocation) return;
+    onCancelPlacing();
     setLocating(true);
     navigator.geolocation.getCurrentPosition(
       (pos) => {
-        setCoords({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+        onCoordsChange({ lat: pos.coords.latitude, lng: pos.coords.longitude });
         setLocating(false);
       },
       () => setLocating(false),
@@ -77,6 +88,10 @@ export function ReportFormDrawer({
       setError("Choose a category.");
       return;
     }
+    if (!coords) {
+      setError("Drop a pin first: use your location or right-click the map.");
+      return;
+    }
     setSubmitting(true);
     setError(null);
 
@@ -87,9 +102,9 @@ export function ReportFormDrawer({
         category,
         title: title.trim(),
         description: description.trim() || null,
-        location_text: locationText.trim(),
-        lat: coords?.lat ?? null,
-        lng: coords?.lng ?? null,
+        location_text: locationText.trim() || null,
+        lat: coords.lat,
+        lng: coords.lng,
         occurred_at: new Date(occurredAt).toISOString(),
         contact_info: contactInfo.trim() || null,
         website,
@@ -110,6 +125,11 @@ export function ReportFormDrawer({
       return;
     }
 
+    const body = await res.json().catch(() => null);
+    if (body?.report?.id && body?.resolve_token) {
+      saveOwnedReport(body.report.id, body.resolve_token);
+    }
+
     handleClose();
   }
 
@@ -118,12 +138,11 @@ export function ReportFormDrawer({
       {open && (
         <>
           <motion.div
-            className="fixed inset-0 z-40 bg-zinc-900/40 backdrop-blur-sm"
+            className="pointer-events-none fixed inset-0 z-40 bg-zinc-900/10"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
-            onClick={handleClose}
           />
           <motion.div
             role="dialog"
@@ -218,10 +237,9 @@ export function ReportFormDrawer({
                 <div className="flex gap-2">
                   <input
                     id="location"
-                    required
                     value={locationText}
                     onChange={(e) => setLocationText(e.target.value)}
-                    placeholder="Warner Beach Main Road, near the tidal pool"
+                    placeholder="Optional label, e.g. near the tidal pool"
                     className="min-w-0 flex-1 rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/30"
                   />
                   <button
@@ -237,9 +255,29 @@ export function ReportFormDrawer({
                     )}
                   </button>
                 </div>
-                {coords && (
+
+                <button
+                  type="button"
+                  onClick={placingPin ? onCancelPlacing : onStartPlacing}
+                  className={`flex items-center justify-center gap-1.5 rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${
+                    placingPin
+                      ? "border-blue-300 bg-blue-50 text-blue-700"
+                      : "border-zinc-200 bg-white text-zinc-600 hover:border-zinc-300"
+                  }`}
+                >
+                  <MapPinLine className="size-4" />
+                  {placingPin ? "Cancel" : coords ? "Move pin on map" : "Drop pin on map"}
+                </button>
+
+                {placingPin ? (
+                  <p className="text-xs text-blue-600">Click anywhere on the map to drop your pin.</p>
+                ) : coords ? (
                   <p className="text-xs text-emerald-600">
-                    Pin captured for the map.
+                    Pin dropped. Drag it on the map to adjust.
+                  </p>
+                ) : (
+                  <p className="text-xs text-zinc-500">
+                    Use your current location, or drop a pin on the map.
                   </p>
                 )}
               </div>
@@ -291,7 +329,7 @@ export function ReportFormDrawer({
 
               <button
                 type="submit"
-                disabled={submitting}
+                disabled={submitting || !coords}
                 className="mt-1 flex items-center justify-center gap-2 rounded-full bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white transition-transform hover:bg-blue-500 active:scale-[0.98] disabled:opacity-60"
               >
                 {submitting && <Spinner className="size-4 animate-spin" />}

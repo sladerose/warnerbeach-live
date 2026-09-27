@@ -29,6 +29,8 @@ export function FeedApp({ initialReports }: { initialReports: Report[] }) {
   const [selected, setSelected] = useState<Report | null>(null);
   const [listOpen, setListOpen] = useState(true);
   const [formOpen, setFormOpen] = useState(false);
+  const [pinCoords, setPinCoords] = useState<{ lat: number; lng: number } | null>(null);
+  const [placingPin, setPlacingPin] = useState(false);
   const reduceMotion = useReducedMotion();
 
   useEffect(() => {
@@ -90,7 +92,19 @@ export function FeedApp({ initialReports }: { initialReports: Report[] }) {
   return (
     <div className="fixed inset-0 overflow-hidden bg-zinc-50">
       <div className="absolute inset-0">
-        <FeedMap reports={filtered} selected={selected} onSelect={setSelected} />
+        <FeedMap
+          reports={filtered}
+          selected={selected}
+          onSelect={setSelected}
+          pinEditable={formOpen}
+          pinCoords={pinCoords}
+          onPinChange={setPinCoords}
+          placingPin={placingPin}
+          onPlacingClick={(coords) => {
+            setPinCoords(coords);
+            setPlacingPin(false);
+          }}
+        />
       </div>
 
       <header className="pointer-events-none absolute inset-x-0 top-0 z-30 p-4 sm:p-6">
@@ -175,7 +189,19 @@ export function FeedApp({ initialReports }: { initialReports: Report[] }) {
         <Plus weight="bold" className="size-6" />
       </button>
 
-      <ReportFormDrawer open={formOpen} onClose={() => setFormOpen(false)} />
+      <ReportFormDrawer
+        open={formOpen}
+        onClose={() => {
+          setFormOpen(false);
+          setPinCoords(null);
+          setPlacingPin(false);
+        }}
+        coords={pinCoords}
+        onCoordsChange={setPinCoords}
+        placingPin={placingPin}
+        onStartPlacing={() => setPlacingPin(true)}
+        onCancelPlacing={() => setPlacingPin(false)}
+      />
     </div>
   );
 }

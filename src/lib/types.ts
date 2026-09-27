@@ -13,7 +13,7 @@ export interface Report {
   category: ReportCategory;
   title: string;
   description: string | null;
-  location_text: string;
+  location_text: string | null;
   lat: number | null;
   lng: number | null;
   occurred_at: string;
