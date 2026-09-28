@@ -17,9 +17,13 @@ export function ReportCard({
 }) {
   const meta = CATEGORY_META[report.category];
   const [resolving, setResolving] = useState(false);
+  const [resolveError, setResolveError] = useState<string | null>(null);
   const [ownedToken, setOwnedToken] = useState<string | null>(null);
 
   useEffect(() => {
+    // Reading localStorage must stay in an effect: this component is
+    // server-rendered first, and localStorage doesn't exist there.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setOwnedToken(getOwnedReportToken(report.id));
   }, [report.id]);
 
@@ -30,12 +34,16 @@ export function ReportCard({
     const token = ownedToken;
     if (!token || resolving) return;
     setResolving(true);
-    await fetch(`/api/reports/${report.id}/resolve`, {
+    setResolveError(null);
+    const res = await fetch(`/api/reports/${report.id}/resolve`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ token }),
     }).catch(() => null);
     setResolving(false);
+    if (!res || !res.ok) {
+      setResolveError("Could not mark resolved. Try again.");
+    }
   }
 
   return (
@@ -110,6 +118,10 @@ export function ReportCard({
           </button>
         )}
       </div>
+
+      {resolveError && (
+        <p className="mt-1.5 text-right text-xs text-rose-600">{resolveError}</p>
+      )}
     </div>
   );
 }

@@ -35,6 +35,10 @@ export function ReportFormDrawer({
   const [description, setDescription] = useState("");
   const [locationText, setLocationText] = useState("");
   const [locating, setLocating] = useState(false);
+  const [manualEntryOpen, setManualEntryOpen] = useState(false);
+  const [manualLat, setManualLat] = useState("");
+  const [manualLng, setManualLng] = useState("");
+  const [manualError, setManualError] = useState<string | null>(null);
   const [occurredAt, setOccurredAt] = useState(nowForInput());
   const [contactInfo, setContactInfo] = useState("");
   const [website, setWebsite] = useState(""); // honeypot, must stay empty
@@ -51,6 +55,10 @@ export function ReportFormDrawer({
     setContactInfo("");
     setWebsite("");
     setError(null);
+    setManualEntryOpen(false);
+    setManualLat("");
+    setManualLng("");
+    setManualError(null);
   }
 
   function handleClose() {
@@ -69,17 +77,47 @@ export function ReportFormDrawer({
   }, [open]);
 
   function useMyLocation() {
-    if (!navigator.geolocation) return;
+    if (!navigator.geolocation) {
+      setError("Your browser doesn't support geolocation. Drop a pin on the map instead.");
+      return;
+    }
     onCancelPlacing();
     setLocating(true);
+    setError(null);
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         onCoordsChange({ lat: pos.coords.latitude, lng: pos.coords.longitude });
         setLocating(false);
       },
-      () => setLocating(false),
+      (err) => {
+        setLocating(false);
+        setError(
+          err.code === err.PERMISSION_DENIED
+            ? "Location access denied. Drop a pin on the map instead."
+            : "Could not get your location. Drop a pin on the map instead."
+        );
+      },
       { enableHighAccuracy: true, timeout: 8000 }
     );
+  }
+
+  function applyManualCoords() {
+    const lat = Number(manualLat);
+    const lng = Number(manualLng);
+    if (!Number.isFinite(lat) || lat < -90 || lat > 90) {
+      setManualError("Latitude must be a number between -90 and 90.");
+      return;
+    }
+    if (!Number.isFinite(lng) || lng < -180 || lng > 180) {
+      setManualError("Longitude must be a number between -180 and 180.");
+      return;
+    }
+    onCancelPlacing();
+    onCoordsChange({ lat, lng });
+    setManualError(null);
+    setManualEntryOpen(false);
+    setManualLat("");
+    setManualLng("");
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -259,6 +297,7 @@ export function ReportFormDrawer({
                 <button
                   type="button"
                   onClick={placingPin ? onCancelPlacing : onStartPlacing}
+                  aria-pressed={placingPin}
                   className={`flex items-center justify-center gap-1.5 rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${
                     placingPin
                       ? "border-blue-300 bg-blue-50 text-blue-700"
@@ -279,6 +318,63 @@ export function ReportFormDrawer({
                   <p className="text-xs text-zinc-500">
                     Use your current location, or drop a pin on the map.
                   </p>
+                )}
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setManualEntryOpen((v) => !v);
+                    setManualError(null);
+                  }}
+                  aria-pressed={manualEntryOpen}
+                  className="self-start text-xs font-medium text-zinc-500 underline decoration-dotted hover:text-zinc-700"
+                >
+                  {manualEntryOpen ? "Cancel manual entry" : "Or enter coordinates manually"}
+                </button>
+
+                {manualEntryOpen && (
+                  <div className="flex flex-col gap-2 rounded-lg border border-zinc-200 bg-zinc-50 p-3">
+                    <div className="flex gap-2">
+                      <div className="flex flex-1 flex-col gap-1">
+                        <label htmlFor="manual-lat" className="text-xs font-medium text-zinc-600">
+                          Latitude
+                        </label>
+                        <input
+                          id="manual-lat"
+                          type="text"
+                          inputMode="decimal"
+                          value={manualLat}
+                          onChange={(e) => setManualLat(e.target.value)}
+                          placeholder="-30.0825"
+                          className="rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+                        />
+                      </div>
+                      <div className="flex flex-1 flex-col gap-1">
+                        <label htmlFor="manual-lng" className="text-xs font-medium text-zinc-600">
+                          Longitude
+                        </label>
+                        <input
+                          id="manual-lng"
+                          type="text"
+                          inputMode="decimal"
+                          value={manualLng}
+                          onChange={(e) => setManualLng(e.target.value)}
+                          placeholder="30.8628"
+                          className="rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+                        />
+                      </div>
+                    </div>
+                    {manualError && (
+                      <p className="text-xs text-rose-600">{manualError}</p>
+                    )}
+                    <button
+                      type="button"
+                      onClick={applyManualCoords}
+                      className="rounded-lg bg-zinc-800 px-3 py-1.5 text-xs font-semibold text-white hover:bg-zinc-700"
+                    >
+                      Set pin
+                    </button>
+                  </div>
                 )}
               </div>
 
